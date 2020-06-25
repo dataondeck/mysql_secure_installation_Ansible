@@ -177,7 +177,7 @@ def check_mysql_connection(host, user, password=''):
     except  mysql.Error:
         return False
 
-def mysql_secure_installation(login_password, new_password, user='root',login_host='localhost', hosts=['hostname'], change_root_password= True, remove_anonymous_user= True, disallow_root_login_remotely= False, remove_test_db= True):
+def mysql_secure_installation(login_password, new_password, user='root',login_host='localhost', hosts=['hostname'], change_root_password= True, remove_anonymous_user= True, disallow_root_login_remotely= False, remove_test_db= True, mysql_version_8=False, python_version_3=False):
     """
     A function to perform the steps of mysql_secure_installation script
     :param login_password: Root's password to login to MySQL
@@ -257,11 +257,19 @@ def mysql_secure_installation(login_password, new_password, user='root',login_ho
                 pwd = {}
                 for host in hosts:
                     cursor.execute('use mysql;')
-                    cursor.execute(
-                      "alter user '{}'@'{}' IDENTIFIED WITH caching_sha2_password BY '{}';".format(user, host,
-                                                                                                        new_password))
+                    if mysql_version_8:
+                        cursor.execute(
+                        "alter user '{}'@'{}' IDENTIFIED WITH caching_sha2_password BY '{}';".format(user, host,
+                                                                                                      new_password))
+                    else:
+                        cursor.execute('update user set password=PASSWORD("{}") where User="{}" AND Host="{}";'.format(new_password, user, 
+                                                                                                                                    host))                                                                                                      
                     cursor.execute('flush privileges;')
-                    cursor.execute('select user, host, authentication_string from mysql.user where user="{}";'.format(user))
+                    
+                    if mysql_version_8:
+                        cursor.execute('select user, host, authentication_string from mysql.user where user="{}";'.format(user))
+                    else:
+                        cursor.execute('select user, host, password from mysql.user where user="{}";'.format(user))
                     data = cursor.fetchall()
                     for d in data:
                         if d[1] == host:
@@ -319,6 +327,8 @@ def main():
         "remove_anonymous_user": {"type": "bool", "default": True, "choices": [True, False]},
         "disallow_root_login_remotely": {"type": "bool", "default": False, "choices": [True, False]},
         "remove_test_db": {"type": "bool", "default": True, "choices": [True, False]},
+        "mysql_version_8": {"type": "bool", "default": False, "choices": [True, False]},
+        "python_version_3": {"type": "bool", "default": False, "choices": [True, False]},
     }
 
     module = AnsibleModule(argument_spec=fields)
@@ -331,7 +341,9 @@ def main():
                               change_root_password=module.params['change_root_password'],
                               remove_anonymous_user=module.params['remove_anonymous_user'],
                               disallow_root_login_remotely=module.params['disallow_root_login_remotely'],
-                              remove_test_db=module.params['remove_test_db'])
+                              remove_test_db=module.params['remove_test_db'],
+                              mysql_version_8=module.params['mysql_version_8'],
+                              python_version_3=module.params['python_version_3'])
 
     if run["change_root_pwd"] == 1 and len(run["hosts_failed"]) == 0:
         module.warn('mysql_secure_installation --> Neither the provided old passwd nor the new passwd are correct -- Skipping')
