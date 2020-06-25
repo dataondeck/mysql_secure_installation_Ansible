@@ -70,6 +70,17 @@ options:
         default: True
         type: bool
 
+    mysql_version_8:
+        description:
+            - Is this MySQL 8?
+        default: False
+        type: bool
+
+    python_version_3:
+        description:
+            - Is this Python3?
+        default: False
+        type: bool
  
 author:
     - eslam.gomaa (linkedin.com/in/eslam-sa3dany)
@@ -88,6 +99,8 @@ EXAMPLES = '''
     remove_anonymous_user: true
     disallow_root_login_remotely: true
     remove_test_db: true
+    mysql_version_8: true
+    python_version_3: true
   register: mysql_secure
 
 - debug:
@@ -105,6 +118,8 @@ EXAMPLES = '''
     remove_anonymous_user: true
     disallow_root_login_remotely: true
     remove_test_db: true
+    mysql_version_8: true
+    python_version_3: true
 '''
 
 RETURN = '''
@@ -243,10 +258,10 @@ def mysql_secure_installation(login_password, new_password, user='root',login_ho
                 for host in hosts:
                     cursor.execute('use mysql;')
                     cursor.execute(
-                        'update user set password=PASSWORD("{}") where User="{}" AND Host="{}";'.format(new_password,
-                                                                                                        user, host))
+                      "alter user '{}'@'{}' IDENTIFIED WITH caching_sha2_password BY '{}';".format(user, host,
+                                                                                                        new_password))
                     cursor.execute('flush privileges;')
-                    cursor.execute('select user, host, password from mysql.user where user="{}";'.format(user))
+                    cursor.execute('select user, host, authentication_string from mysql.user where user="{}";'.format(user))
                     data = cursor.fetchall()
                     for d in data:
                         if d[1] == host:
