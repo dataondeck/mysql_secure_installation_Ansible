@@ -153,7 +153,7 @@ stderr:
 ##############################################
 #######################
 ############
-import MySQLdb as mysql
+import mysqlclient as mysql
 from itertools import chain
 
 def check_mysql_connection(host, user, password=''):
